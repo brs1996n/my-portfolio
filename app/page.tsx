@@ -515,7 +515,7 @@ export default function Home() {
         {/* Education */}
         <section className="fade-up" style={{ marginBottom: 72, animationDelay: "0.5s" }}>
           <div className="section-label">Education</div>
-          <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: var(--radius-md), overflow: "hidden", boxShadow: "var(--shadow-sm)" }}>
+          <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden", boxShadow: "var(--shadow-sm)" }}>
             {[
               { deg: "MS Data Science & AI", school: "Campbellsville University", year: "2024–2026" },
               { deg: "MS Computer Science", school: "Arkansas State University", year: "2020–2021" },
