@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 const suggestions = [
   "What's your strongest technical skill?",
   "Tell me about your CVS Health work",
-  "What cloud platforms do you use?",
+  "How did you eliminate $10M/year in licensing costs?",
   "Why should I hire you?",
 ];
 
@@ -431,7 +431,7 @@ export default function Home() {
           {/* Photo */}
           <div className="photo-wrap" style={{ marginTop: 8 }}>
             <div className="photo-inner">
-              <img src="/IMG_5176_Original.jpeg" alt="Naveen Kumar" />
+              <img src="/profile.webp" alt="Naveen Kumar" />
             </div>
           </div>
 
@@ -445,9 +445,10 @@ export default function Home() {
             <h1 className="hero-name">Naveen<br />Kumar</h1>
 
             <p style={{ color: "#4B5563", fontSize: 16, lineHeight: 1.8, maxWidth: 400, marginBottom: 28, fontWeight: 400 }}>
-              Senior Data Engineer — 7+ years building<br />
-              enterprise-scale platforms across{" "}
-              <span style={{ color: "var(--teal-text)", fontWeight: 600 }}>healthcare & finance</span>.
+              Senior Data Engineer — 7+ years leading<br />
+              enterprise-scale{" "}
+              <span style={{ color: "var(--teal-text)", fontWeight: 600 }}>GCP migrations & data platforms</span>{" "}
+              across healthcare and enterprise analytics.
             </p>
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -535,12 +536,33 @@ export default function Home() {
           <div className="label">Experience</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {[
-              { role: "Senior Data Engineer", company: "TCS · CVS Health", period: "Feb 2024 – Present", current: true,
-                points: ["Event-driven ingestion on GCP Pub/Sub — 60% latency reduction", "dbt medallion architecture: staging → intermediate → marts", "CI/CD automation cutting deployment cycles by 70%", "Enterprise EDM framework — 90% faster execution"] },
-              { role: "Data Engineer", company: "Tekinvaderz · Aetna", period: "Aug 2021 – Jan 2024", current: false,
-                points: ["Migrated 500+ Teradata tables to BigQuery Lakehouse — 50% faster queries", "99.9% data accuracy with automated reconciliation", "HIPAA-compliant security with GCP Secret Manager"] },
+              { role: "Senior Data Engineer", company: "TCS · CVS Health / Aetna", period: "Feb 2024 – Present", current: true,
+                points: [
+                  "Own 180+ of 600+ production pipelines processing ~2 TB/day across HCB, PBM & Retail on GCP",
+                  "Real-time PBM alerting that auto-raises vendor emails & ServiceNow tickets — avoiding SLA fines of $50K–$300K per incident",
+                  "Event-driven ingestion on Pub/Sub + Cloud Functions — 60% lower end-to-end latency",
+                  "CI/CD + enterprise EDM framework — 90% faster execution, 70% shorter deployment cycles, 80+ hrs/month saved",
+                  "Rebuilt claims & enrollment models in dbt medallion architecture; incremental merges cut processing & warehouse cost 20%",
+                  "Migrated BigQuery tables to Snowflake with SQL/Python source-to-target reconciliation",
+                ] },
+              { role: "Data Engineer", company: "Tekinvaderz · CVS Health / Aetna", period: "Aug 2021 – Jan 2024", current: false,
+                points: [
+                  "Architected Sqoop ingestion/egress frameworks that replaced Infoworks — eliminating $10M/year in licensing org-wide",
+                  "Built a Python/JDBC migration validation framework (incl. PHI/PII detection) that replaced a 6-person QA team across 12 projects",
+                  "Consolidated 50+ DAGs & Cloud Functions into one config-driven repo — saving 2+ months/year of deployment & maintenance",
+                  "HIPAA-aligned controls with Secret Manager, access scoping & audit logging; mentored 4 junior engineers",
+                ] },
+              { role: "Graduate Assistant", company: "Arkansas State University", period: "Jun 2020 – Aug 2021", current: false,
+                points: [
+                  "Automated Python/SQL analytics pipelines serving 15+ university departments",
+                  "Dimensional models & Tableau dashboards that cut reporting turnaround by 50%",
+                ] },
               { role: "Data Engineer", company: "Infosys · Experian", period: "Feb 2018 – Dec 2019", current: false,
-                points: ["Batch ingestion pipelines for consumer credit datasets", "60% reduction in manual reconciliation via automation"] },
+                points: [
+                  "Enterprise ETL workflows and dimensional models for high-volume consumer datasets",
+                  "Automated data quality validation — 60% less manual reconciliation; tuned queries to meet SLAs",
+                  "Worked directly with Experian stakeholders on requirements and pipeline performance findings",
+                ] },
             ].map((job) => (
               <div key={job.company} className={`exp-card ${job.current ? "current" : ""}`}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
@@ -573,12 +595,15 @@ export default function Home() {
           <div className="label">Skills</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px,1fr))", gap: 12 }}>
             {[
-              { cat: "Cloud", skills: "GCP · BigQuery · Dataproc · AWS" },
+              { cat: "Cloud", skills: "GCP (BigQuery · Dataproc · Pub/Sub · Cloud Functions · GCS) · AWS (EC2 · Lambda · Athena · Redshift)" },
+              { cat: "Data Engineering", skills: "Spark · Kafka · dbt · ETL/ELT · Data Modeling · Governance · Lineage · Streaming" },
               { cat: "Languages", skills: "Python · SQL · PySpark" },
-              { cat: "Data Engineering", skills: "Spark · Kafka · dbt · ETL/ELT" },
-              { cat: "Databases", skills: "BigQuery · Snowflake · Teradata" },
-              { cat: "BI & Analytics", skills: "Power BI · Tableau · Looker" },
-              { cat: "Domain", skills: "Healthcare · FACETS · CMS" },
+              { cat: "Databases", skills: "BigQuery · Snowflake · PostgreSQL · SQL Server · Teradata · MySQL" },
+              { cat: "Orchestration", skills: "Airflow · Cloud Composer · Docker · Kubernetes" },
+              { cat: "CI/CD & DevOps", skills: "Git · Jenkins · GitHub Actions · Bamboo · GitLab · Octopus Deploy" },
+              { cat: "BI & Analytics", skills: "Power BI · Tableau · Looker · Excel" },
+              { cat: "AI & Automation", skills: "GenAI/LLM automation agents (Gemini) · Agent-based migration tooling" },
+              { cat: "Domain", skills: "Healthcare Claims · Member & Provider · FACETS · CMS · HIPAA" },
             ].map(({ cat, skills }) => (
               <div key={cat} className="skill-card">
                 <div style={{ fontSize: 10, color: "var(--teal-text)", fontWeight: 700, letterSpacing: 2.5, textTransform: "uppercase", marginBottom: 8 }}>{cat}</div>
@@ -595,7 +620,7 @@ export default function Home() {
             {[
               { deg: "MS Data Science & AI", school: "Campbellsville University", year: "2024–2026" },
               { deg: "MS Computer Science", school: "Arkansas State University", year: "2020–2021" },
-              { deg: "B.Tech Mechanical Engineering", school: "Hindustan University", year: "2013–2017" },
+              { deg: "B.E. Mechanical Engineering", school: "Hindustan University", year: "2013–2017" },
             ].map((e, i, arr) => (
               <div key={e.deg} className="edu-row" style={{ borderBottom: i < arr.length - 1 ? "1px solid #F3F4F6" : "none" }}>
                 <div>
@@ -603,6 +628,28 @@ export default function Home() {
                   <div style={{ fontSize: 13, color: "var(--text3)", marginTop: 3 }}>{e.school}</div>
                 </div>
                 <span className="year-pill">{e.year}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── CERTIFICATIONS & AWARDS ── */}
+        <section className="f0 f5" style={{ marginBottom: 72 }}>
+          <div className="label">Certifications & Awards</div>
+          <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: 20, overflow: "hidden", boxShadow: "var(--s2)" }}>
+            {[
+              { name: "Associate Cloud Engineer", org: "Google Cloud", tag: "Certified" },
+              { name: "Claude with Google Cloud's Vertex AI", org: "Anthropic", tag: "Certified" },
+              { name: "Professional Cloud Architect", org: "Google Cloud", tag: "In progress" },
+              { name: "TCS Gems – On the Spot Award", org: "Tata Consultancy Services", tag: "2025 · 2026" },
+              { name: "TCS Gems – Applaud Award", org: "Tata Consultancy Services", tag: "2026" },
+            ].map((c, i, arr) => (
+              <div key={c.name} className="edu-row" style={{ borderBottom: i < arr.length - 1 ? "1px solid #F3F4F6" : "none" }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>{c.name}</div>
+                  <div style={{ fontSize: 13, color: "var(--text3)", marginTop: 3 }}>{c.org}</div>
+                </div>
+                <span className="year-pill">{c.tag}</span>
               </div>
             ))}
           </div>
