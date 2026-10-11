@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 
 const suggestions = [
   "What's your strongest technical skill?",
@@ -8,16 +8,198 @@ const suggestions = [
   "Why should I hire you?",
 ];
 
+const experience = [
+  {
+    role: "Senior Data Engineer", company: "TCS", client: "CVS Health / Aetna", period: "Feb 2024 – Present", current: true,
+    points: [
+      "Own 180+ of 600+ production pipelines processing ~2 TB/day across HCB, PBM and Retail on GCP",
+      "Real-time PBM alerting that auto-raises vendor emails and ServiceNow tickets, avoiding SLA fines of $50K–$300K per incident",
+      "Event-driven ingestion on Pub/Sub and Cloud Functions with 60% lower end-to-end latency",
+      "CI/CD and an enterprise EDM framework: 90% faster execution, 70% shorter deployment cycles, 80+ hours/month saved",
+      "Rebuilt claims and enrollment models in a dbt medallion architecture; incremental merges cut processing and warehouse cost by 20%",
+      "Migrated BigQuery tables to Snowflake with SQL/Python source-to-target reconciliation",
+    ],
+  },
+  {
+    role: "Data Engineer", company: "Tekinvaderz", client: "CVS Health / Aetna", period: "Aug 2021 – Jan 2024", current: false,
+    points: [
+      "Architected Sqoop ingestion/egress frameworks that replaced Infoworks, eliminating $10M/year in licensing org-wide",
+      "Built a Python/JDBC migration validation framework with PHI/PII detection that replaced a 6-person QA team across 12 projects",
+      "Consolidated 50+ DAGs and Cloud Functions into one config-driven repo, saving 2+ months/year of deployment and maintenance",
+      "HIPAA-aligned controls with Secret Manager, access scoping and audit logging; mentored 4 junior engineers",
+    ],
+  },
+  {
+    role: "Graduate Assistant", company: "Arkansas State University", client: null, period: "Jun 2020 – Aug 2021", current: false,
+    points: [
+      "Automated Python/SQL analytics pipelines serving 15+ university departments",
+      "Dimensional models and Tableau dashboards that cut reporting turnaround by 50%",
+    ],
+  },
+  {
+    role: "Data Engineer", company: "Infosys", client: "Experian", period: "Feb 2018 – Dec 2019", current: false,
+    points: [
+      "Enterprise ETL workflows and dimensional models for high-volume consumer datasets",
+      "Automated data quality validation, reducing manual reconciliation by 60%; tuned queries to meet SLAs",
+      "Worked directly with Experian stakeholders on requirements and pipeline performance findings",
+    ],
+  },
+];
+
+const skills = [
+  { cat: "Cloud", tone: "teal", items: ["GCP", "BigQuery", "Dataproc", "Pub/Sub", "Cloud Functions", "Cloud Storage", "AWS", "Lambda", "Athena", "Redshift"] },
+  { cat: "Data engineering", tone: "sky", items: ["Spark", "Kafka", "dbt", "ETL/ELT", "Data modeling", "Governance", "Lineage", "Streaming"] },
+  { cat: "Languages", tone: "violet", items: ["Python", "SQL", "PySpark"] },
+  { cat: "Databases", tone: "teal", items: ["BigQuery", "Snowflake", "PostgreSQL", "SQL Server", "Teradata", "MySQL"] },
+  { cat: "Orchestration", tone: "sky", items: ["Airflow", "Cloud Composer", "Docker", "Kubernetes"] },
+  { cat: "CI/CD", tone: "violet", items: ["Git", "Jenkins", "GitHub Actions", "Bamboo", "GitLab", "Octopus Deploy"] },
+  { cat: "BI & analytics", tone: "teal", items: ["Power BI", "Tableau", "Looker", "Excel"] },
+  { cat: "AI & automation", tone: "sky", items: ["Claude", "Gemini", "LLM agents", "Agent-based migration tooling"] },
+  { cat: "Healthcare domain", tone: "violet", items: ["Claims", "Member & provider", "FACETS", "CMS reporting", "HIPAA"] },
+];
+
+const education = [
+  { deg: "MS, Data Science & AI", school: "Campbellsville University", year: "2024–2026" },
+  { deg: "MS, Computer Science", school: "Arkansas State University", year: "2020–2021" },
+  { deg: "B.E., Mechanical Engineering", school: "Hindustan University", year: "2013–2017" },
+];
+
+const credentials = [
+  { name: "Claude Certified Architect – Foundations", org: "Anthropic", tag: "Issued Sep 2026", href: "https://www.credly.com/badges/ab8a5d16-6ef7-4dc0-9ad9-de93c6ea3b3c", featured: true },
+  { name: "Associate Cloud Engineer", org: "Google Cloud", tag: "Certified" },
+  { name: "Claude with Google Cloud's Vertex AI", org: "Anthropic", tag: "Certified" },
+  { name: "Professional Cloud Architect", org: "Google Cloud", tag: "In progress" },
+  { name: "TCS Gems – On the Spot Award", org: "Tata Consultancy Services", tag: "2025, 2026" },
+  { name: "TCS Gems – Applaud Award", org: "Tata Consultancy Services", tag: "2026" },
+];
+
+/* ── Render the assistant's light markdown (bold + lists) safely ── */
+function inline(text: string): ReactNode[] {
+  return text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map((part, i) =>
+    part.startsWith("**") && part.endsWith("**")
+      ? <strong key={i}>{part.slice(2, -2)}</strong>
+      : <span key={i}>{part.replace(/\*\*/g, "").replace(/(^|\s)\*(\S[^*]*\S|\S)\*(?=\s|$|[.,;:!?])/g, "$1$2")}</span>
+  );
+}
+
+function RichText({ text }: { text: string }) {
+  const blocks: ReactNode[] = [];
+  let list: { ordered: boolean; items: string[] } | null = null;
+  const flush = () => {
+    if (!list) return;
+    const Tag = list.ordered ? "ol" : "ul";
+    blocks.push(<Tag key={blocks.length}>{list.items.map((it, i) => <li key={i}>{inline(it)}</li>)}</Tag>);
+    list = null;
+  };
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line) { flush(); continue; }
+    const bullet = line.match(/^[-*•]\s+(.*)$/);
+    const numbered = line.match(/^\d+[.)]\s+(.*)$/);
+    if (bullet || numbered) {
+      const ordered = !!numbered;
+      if (list && list.ordered !== ordered) flush();
+      if (!list) list = { ordered, items: [] };
+      list.items.push((bullet || numbered)![1]);
+      continue;
+    }
+    flush();
+    const heading = line.match(/^#{1,6}\s+(.*)$/);
+    blocks.push(heading
+      ? <p key={blocks.length} className="rt-h">{inline(heading[1])}</p>
+      : <p key={blocks.length}>{inline(line)}</p>);
+  }
+  flush();
+  return <div className="rt">{blocks}</div>;
+}
+
+/* ── Signature background: data packets flowing along pipeline streams ── */
+function DataStreams() {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const colors = ["45,212,191", "56,189,248", "167,139,250", "244,114,182"];
+    let w = 0, h = 0, raf = 0;
+    type Stream = { y: number; amp: number; freq: number; phase: number; color: string; packets: { x: number; speed: number; size: number }[] };
+    let streams: Stream[] = [];
+
+    const build = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = window.innerWidth; h = window.innerHeight;
+      canvas.width = w * dpr; canvas.height = h * dpr;
+      canvas.style.width = w + "px"; canvas.style.height = h + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const count = w < 700 ? 6 : 9;
+      streams = Array.from({ length: count }, (_, i) => ({
+        y: h * (0.08 + (0.84 * i) / (count - 1)),
+        amp: 30 + Math.random() * 70,
+        freq: 0.0015 + Math.random() * 0.002,
+        phase: Math.random() * Math.PI * 2,
+        color: colors[i % colors.length],
+        packets: Array.from({ length: 2 + Math.floor(Math.random() * 3) }, () => ({
+          x: Math.random() * w, speed: 0.35 + Math.random() * 0.9, size: 1.4 + Math.random() * 1.8,
+        })),
+      }));
+    };
+    const yAt = (s: Stream, x: number, t: number) => s.y + Math.sin(x * s.freq + s.phase + t * 0.00012) * s.amp;
+
+    const draw = (t: number) => {
+      ctx.clearRect(0, 0, w, h);
+      for (const s of streams) {
+        ctx.beginPath();
+        for (let x = -10; x <= w + 10; x += 12) {
+          const y = yAt(s, x, t);
+          if (x === -10) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = `rgba(${s.color},0.09)`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        for (const p of s.packets) {
+          if (!reduce) { p.x += p.speed; if (p.x > w + 80) p.x = -80; }
+          const y = yAt(s, p.x, t);
+          const trail = ctx.createLinearGradient(p.x - 70, y, p.x, y);
+          trail.addColorStop(0, `rgba(${s.color},0)`);
+          trail.addColorStop(1, `rgba(${s.color},0.55)`);
+          ctx.beginPath();
+          for (let k = 70; k >= 0; k -= 7) {
+            const tx = p.x - k, ty = yAt(s, tx, t);
+            if (k === 70) ctx.moveTo(tx, ty); else ctx.lineTo(tx, ty);
+          }
+          ctx.strokeStyle = trail; ctx.lineWidth = p.size; ctx.lineCap = "round"; ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(p.x, y, p.size + 1.2, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${s.color},0.95)`;
+          ctx.shadowColor = `rgba(${s.color},0.9)`; ctx.shadowBlur = 14;
+          ctx.fill(); ctx.shadowBlur = 0;
+        }
+      }
+      if (!reduce) raf = requestAnimationFrame(draw);
+    };
+
+    build();
+    draw(0);
+    const onResize = () => { cancelAnimationFrame(raf); build(); draw(performance.now()); };
+    window.addEventListener("resize", onResize);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", onResize); };
+  }, []);
+  return <canvas ref={ref} className="streams" aria-hidden="true" />;
+}
+
 export default function Home() {
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    const el = scrollRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [messages, loading]);
 
   async function sendMessage(text: string) {
     const trimmed = text.trim();
@@ -35,7 +217,7 @@ export default function Home() {
       const data = await res.json();
       setMessages([...newMessages, { role: "assistant", content: data.message }]);
     } catch {
-      setMessages([...newMessages, { role: "assistant", content: "Something went wrong. Please try again." }]);
+      setMessages([...newMessages, { role: "assistant", content: "The assistant couldn't be reached. Try again in a moment." }]);
     }
     setLoading(false);
     inputRef.current?.focus();
@@ -44,623 +226,376 @@ export default function Home() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Inter:wght@400;500;600&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-          --bg: #F7F8FA;
-          --bg2: #FFFFFF;
-          --text: #0D1117;
-          --text2: #4B5563;
-          --text3: #9CA3AF;
-          --border: #E5E7EB;
-          --border2: #F3F4F6;
-          --teal: #0D9488;
-          --teal-light: #F0FDFA;
-          --teal-mid: #CCFBF1;
-          --teal-text: #0F766E;
-          --indigo: #6366F1;
-          --s1: 0 1px 2px rgba(0,0,0,0.04);
-          --s2: 0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.04);
-          --s3: 0 2px 8px rgba(0,0,0,0.06),0 8px 24px rgba(0,0,0,0.06);
-          --s4: 0 4px 16px rgba(0,0,0,0.07),0 16px 48px rgba(0,0,0,0.07);
-          --s5: 0 8px 32px rgba(0,0,0,0.08),0 32px 80px rgba(0,0,0,0.08);
-          --r: 14px;
-          --r2: 20px;
-          --r3: 28px;
-          --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          --night: #070B1F;
+          --ink: #0E1533;
+          --surface: rgba(17, 25, 58, 0.62);
+          --surface-solid: #131B3E;
+          --line: rgba(148, 163, 255, 0.14);
+          --line-strong: rgba(148, 163, 255, 0.28);
+          --text: #EEF1FB;
+          --text2: #B7BFDC;
+          --text3: #8089AD;
+          --teal: #2DD4BF;
+          --sky: #38BDF8;
+          --violet: #A78BFA;
+          --pink: #F472B6;
+          --display: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+          --body: 'Inter', system-ui, -apple-system, sans-serif;
         }
 
-        html { scroll-behavior: smooth; }
+        html { background: var(--night); scroll-behavior: smooth; }
         body {
-          background: var(--bg);
+          background: var(--night);
           color: var(--text);
-          font-family: var(--font);
+          font-family: var(--body);
           -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
           min-height: 100vh;
           overflow-x: hidden;
         }
+        ::selection { background: rgba(45,212,191,0.35); color: #fff; }
+        a { color: inherit; }
+        :focus-visible { outline: 2px solid var(--sky); outline-offset: 3px; border-radius: 6px; }
 
-        /* ── Multi-layer background ── */
-        .bg-base {
-          position: fixed; inset: 0; z-index: 0;
+        /* ── Background ── */
+        .aurora {
+          position: fixed; inset: 0; z-index: 0; pointer-events: none;
           background:
-            radial-gradient(ellipse 120% 80% at 15% 0%, rgba(13,148,136,0.06) 0%, transparent 55%),
-            radial-gradient(ellipse 80% 60% at 85% 90%, rgba(99,102,241,0.05) 0%, transparent 50%),
-            radial-gradient(ellipse 60% 40% at 50% 50%, rgba(248,250,252,0.9) 0%, transparent 100%),
-            linear-gradient(160deg, #F0FDF9 0%, #F7F8FA 40%, #EEF2FF 100%);
+            radial-gradient(60vw 50vh at 8% -5%, rgba(45,212,191,0.28), transparent 60%),
+            radial-gradient(55vw 55vh at 100% 15%, rgba(139,92,246,0.30), transparent 60%),
+            radial-gradient(60vw 50vh at 70% 105%, rgba(56,189,248,0.22), transparent 60%),
+            radial-gradient(40vw 40vh at 0% 80%, rgba(244,114,182,0.14), transparent 60%),
+            linear-gradient(180deg, #0A1030 0%, #070B1F 55%, #0A0E28 100%);
         }
-        /* Blurred shape 1 */
-        .bg-blob1 {
-          position: fixed; z-index: 0;
-          top: -120px; left: -80px;
-          width: 500px; height: 500px;
-          background: radial-gradient(circle, rgba(13,148,136,0.12) 0%, transparent 65%);
-          filter: blur(60px);
-          pointer-events: none;
-        }
-        /* Blurred shape 2 */
-        .bg-blob2 {
-          position: fixed; z-index: 0;
-          bottom: -100px; right: -60px;
-          width: 440px; height: 440px;
-          background: radial-gradient(circle, rgba(99,102,241,0.09) 0%, transparent 65%);
-          filter: blur(60px);
-          pointer-events: none;
-        }
-        /* Noise */
-        .bg-noise {
-          position: fixed; inset: 0; z-index: 0;
-          opacity: 0.025;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
-          pointer-events: none;
+        .streams { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+        .vignette {
+          position: fixed; inset: 0; z-index: 0; pointer-events: none;
+          background: radial-gradient(ellipse at center, transparent 55%, rgba(4,6,18,0.55) 100%);
         }
 
-        main { position: relative; z-index: 1; }
+        main { position: relative; z-index: 1; width: 100%; max-width: 820px; margin: 0 auto; padding: 88px 20px 120px; }
 
-        ::selection { background: #CCFBF1; color: #0F766E; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 4px; }
-
-        /* ── Animations ── */
-        .f0 { opacity:0; transform:translateY(20px); animation: up .65s cubic-bezier(.16,1,.3,1) forwards; }
-        .f1 { animation-delay:.08s }
-        .f2 { animation-delay:.18s }
-        .f3 { animation-delay:.28s }
-        .f4 { animation-delay:.38s }
-        .f5 { animation-delay:.46s }
-        @keyframes up { to { opacity:1; transform:translateY(0); } }
-
-        /* ── Hero spotlight ── */
-        .hero-spotlight {
-          position: absolute;
-          top: -60px; left: -40px; right: -40px; bottom: -40px;
-          background: radial-gradient(ellipse 70% 60% at 30% 40%, rgba(13,148,136,0.06) 0%, transparent 70%);
-          pointer-events: none;
-          border-radius: 32px;
+        /* ── Hero (the one entrance animation) ── */
+        .hero { display: flex; gap: 36px; align-items: center; margin-bottom: 72px; animation: rise .9s cubic-bezier(.16,1,.3,1) both; }
+        @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+        .photo {
+          width: 148px; height: 148px; flex-shrink: 0; border-radius: 50%; padding: 3px;
+          background: conic-gradient(from 200deg, var(--teal), var(--sky), var(--violet), var(--pink), var(--teal));
+          box-shadow: 0 0 60px rgba(56,189,248,0.35), 0 0 120px rgba(139,92,246,0.25);
         }
-
-        /* ── Profile image ── */
-        .photo-wrap {
-          width: 112px; height: 112px; flex-shrink: 0;
-          border-radius: 50%;
-          padding: 2.5px;
-          background: linear-gradient(135deg, #0D9488 0%, #6366F1 100%);
-          box-shadow: 0 0 0 4px white, var(--s3);
-          position: relative;
+        .photo img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; border: 3px solid var(--night); }
+        .status {
+          display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500;
+          color: #9FF3E6; background: rgba(45,212,191,0.12); border: 1px solid rgba(45,212,191,0.35);
+          padding: 5px 13px; border-radius: 999px; margin-bottom: 16px;
         }
-        .photo-inner {
-          width: 100%; height: 100%;
-          border-radius: 50%; overflow: hidden;
-          background: #E5E7EB;
+        .status i { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 10px var(--teal); }
+        h1 {
+          font-family: var(--display); font-weight: 800; font-size: clamp(48px, 9vw, 84px);
+          line-height: 0.92; letter-spacing: -0.035em; margin-bottom: 18px;
+          background: linear-gradient(100deg, #FFFFFF 10%, #A5F3FC 45%, #C4B5FD 75%, #F9A8D4 100%);
+          -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
         }
-        .photo-inner img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-        /* ── Name ── */
-        .hero-name {
-          font-size: clamp(46px, 8vw, 66px);
-          font-weight: 800;
-          line-height: 1.0;
-          letter-spacing: -2.5px;
-          background: linear-gradient(140deg, #0D1117 0%, #1a4a45 60%, #0F766E 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          margin-bottom: 14px;
-        }
-
-        /* ── Badge ── */
-        .badge {
-          display: inline-flex; align-items: center; gap: 7px;
-          background: var(--teal-light);
-          border: 1px solid var(--teal-mid);
-          border-radius: 999px;
-          padding: 5px 14px;
-          font-size: 12px; font-weight: 500;
-          color: var(--teal-text);
-          margin-bottom: 18px;
-        }
-        .badge-dot {
-          width: 6px; height: 6px; border-radius: 50%;
-          background: var(--teal);
-          animation: blink 2.5s ease-in-out infinite;
-          box-shadow: 0 0 4px rgba(13,148,136,0.5);
-        }
-        @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.3;} }
-
-        /* ── Buttons ── */
+        .hero > div { min-width: 0; }
+        .lede { font-size: 17px; line-height: 1.65; color: var(--text2); max-width: 46ch; margin-bottom: 24px; }
+        .actions { display: flex; flex-wrap: wrap; gap: 10px; }
         .btn {
-          display: inline-flex; align-items: center; gap: 6px;
-          text-decoration: none;
-          border-radius: 999px;
-          padding: 8px 20px;
-          font-size: 13px; font-weight: 500;
-          font-family: var(--font);
-          cursor: pointer;
-          border: none;
-          transition: all .2s cubic-bezier(.16,1,.3,1);
+          display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+          font-size: 14px; font-weight: 600; padding: 10px 18px; border-radius: 12px;
+          border: 1px solid var(--line-strong); background: rgba(255,255,255,0.04); color: var(--text);
+          transition: background .2s, border-color .2s, transform .2s;
         }
-        .btn-ghost {
-          background: white;
-          border: 1px solid var(--border);
-          color: var(--text2);
-          box-shadow: var(--s1);
-        }
-        .btn-ghost:hover {
-          background: #FAFAFA;
-          border-color: #D1D5DB;
-          color: var(--text);
-          transform: translateY(-2px);
-          box-shadow: var(--s2);
-        }
-        .btn-loc {
-          background: var(--teal-light);
-          border: 1px solid var(--teal-mid);
-          color: var(--teal-text);
-        }
-        .btn-send {
-          border-radius: 10px;
-          padding: 11px 22px;
-          font-size: 13px;
-          font-weight: 600;
-          white-space: nowrap;
-        }
-        .btn-send.on {
-          background: var(--teal);
-          color: white;
-          box-shadow: 0 2px 8px rgba(13,148,136,0.25);
-        }
-        .btn-send.on:hover {
-          background: #0F766E;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 16px rgba(13,148,136,0.3);
-        }
-        .btn-send.off {
-          background: #F3F4F6;
-          color: var(--text3);
-          cursor: default;
-        }
+        .btn:hover { background: rgba(255,255,255,0.09); border-color: rgba(165,243,252,0.5); transform: translateY(-1px); }
+        .btn.primary { background: linear-gradient(120deg, var(--teal), var(--sky)); color: #04121F; border-color: transparent; }
+        .btn.primary:hover { filter: brightness(1.08); }
+        .btn.place { color: var(--text3); border-style: dashed; cursor: default; }
+        .btn.place:hover { transform: none; background: rgba(255,255,255,0.04); border-color: var(--line-strong); }
 
-        /* ── Section label ── */
-        .label {
-          font-size: 10px; font-weight: 700;
-          color: var(--text3);
-          letter-spacing: 3.5px;
-          text-transform: uppercase;
-          margin-bottom: 24px;
-          display: flex; align-items: center; gap: 14px;
+        /* ── Section headings ── */
+        section { margin-bottom: 72px; }
+        h2 {
+          font-family: var(--display); font-weight: 700; font-size: 30px; letter-spacing: -0.02em;
+          margin-bottom: 22px; color: var(--text);
         }
-        .label::after { content:''; flex:1; height:1px; background: var(--border); }
+        h2 small { display: block; font-family: var(--body); font-size: 14px; font-weight: 400; color: var(--text3); letter-spacing: 0; margin-top: 4px; }
 
-        /* ── AI Chat card ── */
-        .ai-card {
-          background: rgba(255,255,255,0.92);
-          border: 1px solid rgba(229,231,235,0.8);
-          border-radius: var(--r3);
-          box-shadow: var(--s5);
-          overflow: hidden;
-          backdrop-filter: blur(24px) saturate(1.4);
-          -webkit-backdrop-filter: blur(24px) saturate(1.4);
-          position: relative;
+        /* ── Chat ── */
+        .chat {
+          border-radius: 24px; overflow: hidden; position: relative;
+          background: linear-gradient(180deg, rgba(23,32,72,0.82), rgba(14,21,51,0.82));
+          border: 1px solid var(--line-strong);
+          box-shadow: 0 30px 80px rgba(2,4,20,0.6), 0 0 0 1px rgba(255,255,255,0.02) inset;
+          backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
         }
-        /* Gradient border top */
-        .ai-card::before {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; right: 0;
-          height: 1px;
-          background: linear-gradient(90deg, transparent 0%, rgba(13,148,136,0.4) 30%, rgba(99,102,241,0.4) 70%, transparent 100%);
+        .chat::before {
+          content: ''; position: absolute; inset: 0 0 auto 0; height: 2px;
+          background: linear-gradient(90deg, var(--teal), var(--sky), var(--violet), var(--pink));
         }
-        .ai-header {
-          padding: 18px 24px;
-          border-bottom: 1px solid var(--border2);
-          background: linear-gradient(180deg, rgba(240,253,250,0.5) 0%, transparent 100%);
-          display: flex; align-items: center; gap: 12px;
+        .chat-head { display: flex; align-items: center; gap: 12px; padding: 20px 22px; border-bottom: 1px solid var(--line); }
+        .chat-icon {
+          width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; font-size: 17px; color: #fff;
+          background: linear-gradient(135deg, var(--teal), var(--violet)); box-shadow: 0 0 24px rgba(139,92,246,0.45);
         }
-        .ai-icon {
-          width: 32px; height: 32px; border-radius: 9px;
-          background: linear-gradient(135deg, var(--teal-light), #EEF2FF);
-          border: 1px solid var(--teal-mid);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 15px;
+        .chat-title { font-weight: 600; font-size: 15px; }
+        .chat-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+        .suggests { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 18px 18px 0; }
+        .suggest {
+          text-align: left; font: inherit; font-size: 14px; line-height: 1.45; color: var(--text2); cursor: pointer;
+          background: rgba(255,255,255,0.035); border: 1px solid var(--line); border-radius: 14px; padding: 13px 15px;
+          transition: background .18s, border-color .18s, color .18s;
         }
-        .suggest-btn {
-          width: 100%;
-          text-align: left;
-          background: rgba(249,250,251,0.7);
-          border: 1px solid var(--border);
-          border-radius: 12px;
-          padding: 13px 18px;
-          font-size: 14px;
-          color: var(--text2);
-          cursor: pointer;
-          font-family: var(--font);
-          transition: all .18s cubic-bezier(.16,1,.3,1);
-          display: flex; align-items: center; gap: 10px;
-          font-weight: 400;
+        .suggest:hover { background: rgba(56,189,248,0.10); border-color: rgba(56,189,248,0.45); color: var(--text); }
+        .log { padding: 22px; max-height: 440px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+        .log::-webkit-scrollbar { width: 6px; }
+        .log::-webkit-scrollbar-thumb { background: rgba(148,163,255,0.25); border-radius: 6px; }
+        .who { font-size: 12px; font-weight: 600; color: var(--text3); margin-bottom: 6px; }
+        .row { display: flex; flex-direction: column; }
+        .row.user { align-items: flex-end; }
+        .bubble-user {
+          max-width: 85%; padding: 11px 15px; border-radius: 16px 16px 4px 16px; font-size: 14.5px; line-height: 1.6;
+          background: linear-gradient(120deg, #14B8A6, #0EA5E9); color: #fff;
         }
-        .suggest-btn:hover {
-          background: var(--teal-light);
-          border-color: var(--teal-mid);
-          color: var(--teal-text);
-          transform: translateX(4px);
-          box-shadow: var(--s2);
+        .bubble-ai {
+          max-width: 92%; padding: 14px 18px; border-radius: 16px 16px 16px 4px;
+          background: rgba(255,255,255,0.05); border: 1px solid var(--line); color: var(--text2);
         }
-        .suggest-icon { color: var(--teal); font-size: 13px; flex-shrink: 0; opacity: 0.7; }
-        .msg-user {
-          background: var(--teal);
-          color: white;
-          border-radius: 18px 18px 4px 18px;
-          padding: 12px 16px;
-          font-size: 14px; line-height: 1.65;
-          max-width: 85%;
-          align-self: flex-end;
-          box-shadow: 0 2px 8px rgba(13,148,136,0.2);
+        .rt { font-size: 14.5px; line-height: 1.7; display: flex; flex-direction: column; gap: 10px; }
+        .rt strong { color: var(--text); font-weight: 600; }
+        .rt .rt-h { color: var(--text); font-weight: 600; }
+        .rt ul, .rt ol { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+        .rt li::marker { color: var(--teal); }
+        .dots span { display: inline-block; width: 6px; height: 6px; margin: 0 2px; border-radius: 50%; background: var(--sky); animation: pulse 1.3s infinite ease-in-out; }
+        .dots span:nth-child(2) { animation-delay: .15s; } .dots span:nth-child(3) { animation-delay: .3s; }
+        @keyframes pulse { 0%,80%,100% { opacity: .25; transform: scale(.7); } 40% { opacity: 1; transform: scale(1); } }
+        .composer { display: flex; gap: 10px; padding: 16px; border-top: 1px solid var(--line); background: rgba(7,11,31,0.35); }
+        .composer input {
+          flex: 1; min-width: 0; font: inherit; font-size: 14.5px; color: var(--text);
+          background: rgba(255,255,255,0.05); border: 1px solid var(--line-strong); border-radius: 12px; padding: 12px 15px; outline: none;
+          transition: border-color .2s, box-shadow .2s;
         }
-        .msg-ai {
-          background: white;
-          border: 1px solid var(--border);
-          border-radius: 18px 18px 18px 4px;
-          padding: 14px 18px;
-          font-size: 14px; line-height: 1.75;
-          color: var(--text2);
-          max-width: 90%;
-          box-shadow: var(--s2);
+        .composer input::placeholder { color: var(--text3); }
+        .composer input:focus { border-color: var(--sky); box-shadow: 0 0 0 3px rgba(56,189,248,0.18); }
+        .send {
+          font: inherit; font-weight: 600; font-size: 14px; border: 0; border-radius: 12px; padding: 0 20px; cursor: pointer;
+          background: linear-gradient(120deg, var(--teal), var(--sky)); color: #04121F; transition: filter .2s, opacity .2s;
         }
-        .chat-input {
-          flex: 1;
-          background: white;
-          border: 1.5px solid var(--border);
-          border-radius: 12px;
-          padding: 12px 16px;
-          font-size: 14px;
-          color: var(--text);
-          font-family: var(--font);
-          outline: none;
-          transition: all .2s;
-          box-shadow: var(--s1);
-        }
-        .chat-input::placeholder { color: var(--text3); }
-        .chat-input:focus {
-          border-color: var(--teal);
-          box-shadow: 0 0 0 3px rgba(13,148,136,0.1);
-        }
-        .dot-loader span {
-          display: inline-block; width: 5px; height: 5px;
-          border-radius: 50%; background: var(--teal);
-          animation: db 1.4s ease-in-out infinite; margin: 0 2px;
-        }
-        .dot-loader span:nth-child(2){animation-delay:.2s}
-        .dot-loader span:nth-child(3){animation-delay:.4s}
-        @keyframes db{0%,80%,100%{transform:scale(.6);opacity:.3}40%{transform:scale(1);opacity:1}}
+        .send:disabled { opacity: .35; cursor: default; }
+        .send:not(:disabled):hover { filter: brightness(1.1); }
 
-        /* ── Experience cards ── */
-        .exp-card {
-          background: white;
-          border: 1px solid var(--border);
-          border-radius: var(--r2);
-          padding: 28px 32px;
-          box-shadow: var(--s2);
-          transition: all .22s cubic-bezier(.16,1,.3,1);
-          position: relative; overflow: hidden;
+        /* ── Experience timeline (a real sequence) ── */
+        .timeline { position: relative; padding-left: 30px; }
+        .timeline::before {
+          content: ''; position: absolute; left: 7px; top: 10px; bottom: 10px; width: 2px;
+          background: linear-gradient(180deg, var(--teal), var(--sky) 40%, var(--violet) 75%, rgba(167,139,250,0.1));
         }
-        .exp-card:hover {
-          box-shadow: var(--s4);
-          transform: translateY(-3px);
-          border-color: #D1D5DB;
+        .job { position: relative; margin-bottom: 18px; }
+        .job::before {
+          content: ''; position: absolute; left: -30px; top: 24px; width: 16px; height: 16px; border-radius: 50%;
+          background: var(--night); border: 2px solid var(--sky);
         }
-        .exp-card.current::before {
-          content:''; position:absolute;
-          top:0; left:0; right:0; height:2px;
-          background: linear-gradient(90deg, var(--teal), var(--indigo));
+        .job.current::before { background: var(--teal); border-color: #A7F3D0; box-shadow: 0 0 0 5px rgba(45,212,191,0.18), 0 0 18px var(--teal); }
+        .job-card {
+          background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 22px 24px;
+          backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
         }
-        .exp-card.current {
-          background: linear-gradient(180deg, rgba(240,253,250,0.4) 0%, white 40%);
-        }
+        .job.current .job-card { border-color: rgba(45,212,191,0.4); background: linear-gradient(160deg, rgba(20,184,166,0.14), var(--surface) 45%); }
+        .job-top { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+        .job-role { font-family: var(--display); font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+        .job-org { font-size: 14px; color: var(--sky); margin-top: 3px; font-weight: 500; }
+        .job-org span { color: var(--text3); font-weight: 400; }
+        .job-period { font-size: 13px; color: var(--text3); white-space: nowrap; padding-top: 4px; }
+        .job ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+        .job li { position: relative; padding-left: 18px; font-size: 14.5px; line-height: 1.6; color: var(--text2); }
+        .job li::before { content: ''; position: absolute; left: 0; top: .62em; width: 6px; height: 6px; border-radius: 2px; background: var(--teal); opacity: .8; }
 
-        /* ── Skill cards ── */
-        .skill-card {
-          background: white;
-          border: 1px solid var(--border);
-          border-radius: var(--r);
-          padding: 18px 20px;
-          box-shadow: var(--s1);
-          transition: all .2s cubic-bezier(.16,1,.3,1);
-        }
-        .skill-card:hover {
-          box-shadow: var(--s3);
-          transform: translateY(-3px);
-          border-color: var(--teal-mid);
-          background: linear-gradient(145deg, var(--teal-light), white);
-        }
+        /* ── Skills ── */
+        .skills { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+        .skill { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px 16px 14px; }
+        .skill h3 { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: var(--text); }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip { font-size: 12.5px; padding: 4px 10px; border-radius: 999px; border: 1px solid; }
+        .tone-teal .chip { color: #99F6E4; background: rgba(45,212,191,0.10); border-color: rgba(45,212,191,0.28); }
+        .tone-sky .chip { color: #BAE6FD; background: rgba(56,189,248,0.10); border-color: rgba(56,189,248,0.28); }
+        .tone-violet .chip { color: #DDD6FE; background: rgba(167,139,250,0.12); border-color: rgba(167,139,250,0.30); }
 
-        /* ── Education ── */
-        .edu-row {
-          padding: 20px 28px;
-          transition: background .15s;
-          display: flex; justify-content: space-between;
-          align-items: center; flex-wrap: wrap; gap: 8px;
-        }
-        .edu-row:hover { background: #FAFAFA; }
-        .year-pill {
-          font-size: 12px; color: var(--text3);
-          background: var(--bg2); border: 1px solid var(--border);
-          border-radius: 6px; padding: 3px 10px;
-        }
+        /* ── Lists (education, credentials) ── */
+        .list { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .item { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 17px 22px; border-bottom: 1px solid var(--line); text-decoration: none; }
+        .item:last-child { border-bottom: 0; }
+        a.item { transition: background .18s; }
+        a.item:hover { background: rgba(255,255,255,0.04); }
+        .item-name { font-size: 15px; font-weight: 600; color: var(--text); }
+        .item-sub { font-size: 13.5px; color: var(--text3); margin-top: 3px; }
+        .pill { font-size: 12.5px; color: var(--text2); border: 1px solid var(--line-strong); border-radius: 8px; padding: 3px 10px; white-space: nowrap; }
+        .featured { background: linear-gradient(110deg, rgba(167,139,250,0.20), rgba(56,189,248,0.10) 60%, transparent); }
+        .featured .item-name { font-size: 16px; }
+        .featured .pill { color: #E9D5FF; border-color: rgba(167,139,250,0.55); background: rgba(167,139,250,0.15); }
+        .verify { color: var(--violet); font-size: 13px; font-weight: 500; margin-left: 6px; }
 
-        @media(max-width:600px){
-          .hero-row{flex-direction:column!important;gap:24px!important}
-          .hero-name{font-size:44px!important;letter-spacing:-1.5px!important}
+        footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-top: 26px; border-top: 1px solid var(--line); font-size: 13px; color: var(--text3); }
+
+        @media (max-width: 720px) {
+          main { padding-top: 56px; }
+          .hero { flex-direction: column; align-items: flex-start; gap: 24px; }
+          .photo { width: 120px; height: 120px; }
+          .suggests { grid-template-columns: 1fr; }
+          .job-card { padding: 18px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .hero { animation: none; }
+          html { scroll-behavior: auto; }
         }
       `}</style>
 
-      {/* Background layers */}
-      <div className="bg-base" />
-      <div className="bg-blob1" />
-      <div className="bg-blob2" />
-      <div className="bg-noise" />
+      <div className="aurora" />
+      <DataStreams />
+      <div className="vignette" />
 
-      <main style={{ maxWidth: 780, margin: "0 auto", padding: "80px 24px 128px" }}>
-
-        {/* ── HERO ── */}
-        <section className="f0 f1 hero-row" style={{ position: "relative", display: "flex", gap: 40, alignItems: "flex-start", marginBottom: 100 }}>
-          <div className="hero-spotlight" />
-
-          {/* Photo */}
-          <div className="photo-wrap" style={{ marginTop: 8 }}>
-            <div className="photo-inner">
-              <img src="/profile.webp" alt="Naveen Kumar" />
-            </div>
+      <main>
+        <header className="hero">
+          <div className="photo">
+            <img src="/profile.webp" alt="Naveen Kumar" />
           </div>
-
-          {/* Text */}
-          <div style={{ flex: 1, position: "relative" }}>
-            <div className="badge">
-              <div className="badge-dot" />
-              Available for new roles
-            </div>
-
-            <h1 className="hero-name">Naveen<br />Kumar</h1>
-
-            <p style={{ color: "#4B5563", fontSize: 16, lineHeight: 1.8, maxWidth: 400, marginBottom: 28, fontWeight: 400 }}>
-              Senior Data Engineer — 7+ years leading<br />
-              enterprise-scale{" "}
-              <span style={{ color: "var(--teal-text)", fontWeight: 600 }}>GCP migrations & data platforms</span>{" "}
-              across healthcare and enterprise analytics.
+          <div>
+            <div className="status"><i />Open to new roles</div>
+            <h1>Naveen<br />Kumar</h1>
+            <p className="lede">
+              Senior Data Engineer with 7+ years leading enterprise-scale GCP migrations and data platforms across healthcare and enterprise analytics.
             </p>
-
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <a href="https://www.linkedin.com/in/naveenkumarbrs/" target="_blank" className="btn btn-ghost">→ LinkedIn</a>
-              <a href="mailto:nvnkmr1996@gmail.com" className="btn btn-ghost">→ Email</a>
-              <span className="btn btn-loc">
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--teal)", display: "inline-block", boxShadow: "0 0 4px rgba(13,148,136,0.5)" }} />
-                Nashville, TN
-              </span>
+            <div className="actions">
+              <a href="https://www.linkedin.com/in/naveenkumarbrs/" target="_blank" rel="noopener noreferrer" className="btn primary">LinkedIn</a>
+              <a href="mailto:nvnkmr1996@gmail.com" className="btn">Email me</a>
+              <span className="btn place">Nashville, TN</span>
             </div>
           </div>
-        </section>
+        </header>
 
-        {/* ── AI CHAT ── */}
-        <section className="f0 f2" style={{ marginBottom: 88 }}>
-          <div className="label">Ask my portfolio anything</div>
-
-          <div className="ai-card">
-            {/* Header */}
-            <div className="ai-header">
-              <div className="ai-icon">✦</div>
+        <section aria-label="Ask my portfolio">
+          <div className="chat">
+            <div className="chat-head">
+              <div className="chat-icon">✦</div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", lineHeight: 1.3 }}>Ask my portfolio anything</div>
-                <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 1 }}>Powered by Claude AI</div>
+                <div className="chat-title">Ask my portfolio anything</div>
+                <div className="chat-sub">Answers come from my resume, powered by Claude</div>
               </div>
             </div>
 
-            {/* Suggestions */}
             {messages.length === 0 && (
-              <div style={{ padding: "20px 20px 0", display: "flex", flexDirection: "column", gap: 8 }}>
-                <p style={{ fontSize: 10, color: "var(--text3)", fontWeight: 700, letterSpacing: 2.5, textTransform: "uppercase", marginBottom: 4, paddingLeft: 2 }}>Try asking</p>
+              <div className="suggests">
                 {suggestions.map((s) => (
-                  <button key={s} className="suggest-btn" onClick={() => sendMessage(s)}>
-                    <span className="suggest-icon">→</span>
-                    {s}
-                  </button>
+                  <button key={s} className="suggest" onClick={() => sendMessage(s)}>{s}</button>
                 ))}
               </div>
             )}
 
-            {/* Messages */}
             {messages.length > 0 && (
-              <div style={{ padding: "24px", maxHeight: 380, overflowY: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
+              <div className="log" ref={scrollRef} aria-live="polite">
                 {messages.map((m, i) => (
-                  <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start", gap: 4 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: m.role === "user" ? "var(--teal-text)" : "var(--text3)", marginBottom: 2, paddingLeft: m.role === "assistant" ? 4 : 0, paddingRight: m.role === "user" ? 4 : 0 }}>
-                      {m.role === "user" ? "You" : "Naveen"}
-                    </div>
-                    <div className={m.role === "user" ? "msg-user" : "msg-ai"}>
-                      {m.content}
-                    </div>
+                  <div key={i} className={`row ${m.role === "user" ? "user" : ""}`}>
+                    <div className="who">{m.role === "user" ? "You" : "Naveen"}</div>
+                    {m.role === "user"
+                      ? <div className="bubble-user">{m.content}</div>
+                      : <div className="bubble-ai"><RichText text={m.content} /></div>}
                   </div>
                 ))}
                 {loading && (
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "var(--text3)", paddingLeft: 4 }}>Naveen</div>
-                    <div className="msg-ai" style={{ padding: "14px 20px" }}>
-                      <div className="dot-loader"><span /><span /><span /></div>
-                    </div>
+                  <div className="row">
+                    <div className="who">Naveen</div>
+                    <div className="bubble-ai"><div className="dots"><span /><span /><span /></div></div>
                   </div>
                 )}
-                <div ref={messagesEndRef} />
               </div>
             )}
 
-            {/* Input bar */}
-            <div style={{ padding: "14px 16px", display: "flex", gap: 10, borderTop: "1px solid var(--border2)", background: "rgba(249,250,251,0.6)", marginTop: messages.length === 0 ? 16 : 0 }}>
+            <div className="composer" style={{ marginTop: messages.length === 0 ? 18 : 0 }}>
               <input
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); }}}
-                placeholder="Ask me anything about my experience..."
-                className="chat-input"
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
+                placeholder="Ask about my experience, skills or projects"
+                aria-label="Your question"
               />
-              <button onClick={() => sendMessage(input)} disabled={loading || !input.trim()} className={`btn btn-send ${input.trim() && !loading ? "on" : "off"}`}>
-                Send
-              </button>
+              <button className="send" onClick={() => sendMessage(input)} disabled={loading || !input.trim()}>Send</button>
             </div>
           </div>
         </section>
 
-        {/* ── EXPERIENCE ── */}
-        <section className="f0 f3" style={{ marginBottom: 72 }}>
-          <div className="label">Experience</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {[
-              { role: "Senior Data Engineer", company: "TCS · CVS Health / Aetna", period: "Feb 2024 – Present", current: true,
-                points: [
-                  "Own 180+ of 600+ production pipelines processing ~2 TB/day across HCB, PBM & Retail on GCP",
-                  "Real-time PBM alerting that auto-raises vendor emails & ServiceNow tickets — avoiding SLA fines of $50K–$300K per incident",
-                  "Event-driven ingestion on Pub/Sub + Cloud Functions — 60% lower end-to-end latency",
-                  "CI/CD + enterprise EDM framework — 90% faster execution, 70% shorter deployment cycles, 80+ hrs/month saved",
-                  "Rebuilt claims & enrollment models in dbt medallion architecture; incremental merges cut processing & warehouse cost 20%",
-                  "Migrated BigQuery tables to Snowflake with SQL/Python source-to-target reconciliation",
-                ] },
-              { role: "Data Engineer", company: "Tekinvaderz · CVS Health / Aetna", period: "Aug 2021 – Jan 2024", current: false,
-                points: [
-                  "Architected Sqoop ingestion/egress frameworks that replaced Infoworks — eliminating $10M/year in licensing org-wide",
-                  "Built a Python/JDBC migration validation framework (incl. PHI/PII detection) that replaced a 6-person QA team across 12 projects",
-                  "Consolidated 50+ DAGs & Cloud Functions into one config-driven repo — saving 2+ months/year of deployment & maintenance",
-                  "HIPAA-aligned controls with Secret Manager, access scoping & audit logging; mentored 4 junior engineers",
-                ] },
-              { role: "Graduate Assistant", company: "Arkansas State University", period: "Jun 2020 – Aug 2021", current: false,
-                points: [
-                  "Automated Python/SQL analytics pipelines serving 15+ university departments",
-                  "Dimensional models & Tableau dashboards that cut reporting turnaround by 50%",
-                ] },
-              { role: "Data Engineer", company: "Infosys · Experian", period: "Feb 2018 – Dec 2019", current: false,
-                points: [
-                  "Enterprise ETL workflows and dimensional models for high-volume consumer datasets",
-                  "Automated data quality validation — 60% less manual reconciliation; tuned queries to meet SLAs",
-                  "Worked directly with Experian stakeholders on requirements and pipeline performance findings",
-                ] },
-            ].map((job) => (
-              <div key={job.company} className={`exp-card ${job.current ? "current" : ""}`}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 5 }}>
-                      <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", letterSpacing: -0.3 }}>{job.role}</span>
-                      {job.current && (
-                        <span style={{ fontSize: 10, background: "var(--teal-light)", color: "var(--teal-text)", border: "1px solid var(--teal-mid)", borderRadius: 999, padding: "2px 10px", fontWeight: 600, letterSpacing: 0.5 }}>Current</span>
-                      )}
+        <section>
+          <h2>Experience<small>4+ years with CVS Health / Aetna across two employers</small></h2>
+          <div className="timeline">
+            {experience.map((job) => (
+              <article key={job.company + job.period} className={`job ${job.current ? "current" : ""}`}>
+                <div className="job-card">
+                  <div className="job-top">
+                    <div>
+                      <div className="job-role">{job.role}</div>
+                      <div className="job-org">{job.company}{job.client && <span>, client {job.client}</span>}</div>
                     </div>
-                    <div style={{ color: "var(--text3)", fontSize: 13, fontWeight: 500 }}>{job.company}</div>
+                    <div className="job-period">{job.period}</div>
                   </div>
-                  <span style={{ color: "var(--text3)", fontSize: 13 }}>{job.period}</span>
+                  <ul>{job.points.map((p) => <li key={p}>{p}</li>)}</ul>
                 </div>
-                <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 9 }}>
-                  {job.points.map(p => (
-                    <li key={p} style={{ fontSize: 14, color: "#4B5563", paddingLeft: 20, position: "relative", lineHeight: 1.65 }}>
-                      <span style={{ position: "absolute", left: 0, top: "0.4em", width: 5, height: 5, borderRadius: "50%", background: "var(--teal)", opacity: 0.5, display: "inline-block" }} />
-                      {p}
-                    </li>
-                  ))}
-                </ul>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h2>Skills</h2>
+          <div className="skills">
+            {skills.map((s) => (
+              <div key={s.cat} className={`skill tone-${s.tone}`}>
+                <h3>{s.cat}</h3>
+                <div className="chips">{s.items.map((it) => <span key={it} className="chip">{it}</span>)}</div>
               </div>
             ))}
           </div>
         </section>
 
-        {/* ── SKILLS ── */}
-        <section className="f0 f4" style={{ marginBottom: 72 }}>
-          <div className="label">Skills</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px,1fr))", gap: 12 }}>
-            {[
-              { cat: "Cloud", skills: "GCP (BigQuery · Dataproc · Pub/Sub · Cloud Functions · GCS) · AWS (EC2 · Lambda · Athena · Redshift)" },
-              { cat: "Data Engineering", skills: "Spark · Kafka · dbt · ETL/ELT · Data Modeling · Governance · Lineage · Streaming" },
-              { cat: "Languages", skills: "Python · SQL · PySpark" },
-              { cat: "Databases", skills: "BigQuery · Snowflake · PostgreSQL · SQL Server · Teradata · MySQL" },
-              { cat: "Orchestration", skills: "Airflow · Cloud Composer · Docker · Kubernetes" },
-              { cat: "CI/CD & DevOps", skills: "Git · Jenkins · GitHub Actions · Bamboo · GitLab · Octopus Deploy" },
-              { cat: "BI & Analytics", skills: "Power BI · Tableau · Looker · Excel" },
-              { cat: "AI & Automation", skills: "GenAI/LLM automation agents (Gemini) · Agent-based migration tooling" },
-              { cat: "Domain", skills: "Healthcare Claims · Member & Provider · FACETS · CMS · HIPAA" },
-            ].map(({ cat, skills }) => (
-              <div key={cat} className="skill-card">
-                <div style={{ fontSize: 10, color: "var(--teal-text)", fontWeight: 700, letterSpacing: 2.5, textTransform: "uppercase", marginBottom: 8 }}>{cat}</div>
-                <div style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.65 }}>{skills}</div>
-              </div>
-            ))}
+        <section>
+          <h2>Certifications and awards</h2>
+          <div className="list">
+            {credentials.map((c) => {
+              const body = (
+                <>
+                  <div>
+                    <div className="item-name">{c.name}</div>
+                    <div className="item-sub">{c.org}{c.href && <span className="verify">Verify on Credly</span>}</div>
+                  </div>
+                  <span className="pill">{c.tag}</span>
+                </>
+              );
+              return c.href
+                ? <a key={c.name} href={c.href} target="_blank" rel="noopener noreferrer" className={`item ${c.featured ? "featured" : ""}`}>{body}</a>
+                : <div key={c.name} className="item">{body}</div>;
+            })}
           </div>
         </section>
 
-        {/* ── EDUCATION ── */}
-        <section className="f0 f5" style={{ marginBottom: 72 }}>
-          <div className="label">Education</div>
-          <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: 20, overflow: "hidden", boxShadow: "var(--s2)" }}>
-            {[
-              { deg: "MS Data Science & AI", school: "Campbellsville University", year: "2024–2026" },
-              { deg: "MS Computer Science", school: "Arkansas State University", year: "2020–2021" },
-              { deg: "B.E. Mechanical Engineering", school: "Hindustan University", year: "2013–2017" },
-            ].map((e, i, arr) => (
-              <div key={e.deg} className="edu-row" style={{ borderBottom: i < arr.length - 1 ? "1px solid #F3F4F6" : "none" }}>
+        <section>
+          <h2>Education</h2>
+          <div className="list">
+            {education.map((e) => (
+              <div key={e.deg} className="item">
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>{e.deg}</div>
-                  <div style={{ fontSize: 13, color: "var(--text3)", marginTop: 3 }}>{e.school}</div>
+                  <div className="item-name">{e.deg}</div>
+                  <div className="item-sub">{e.school}</div>
                 </div>
-                <span className="year-pill">{e.year}</span>
+                <span className="pill">{e.year}</span>
               </div>
             ))}
           </div>
         </section>
 
-        {/* ── CERTIFICATIONS & AWARDS ── */}
-        <section className="f0 f5" style={{ marginBottom: 72 }}>
-          <div className="label">Certifications & Awards</div>
-          <div style={{ background: "white", border: "1px solid var(--border)", borderRadius: 20, overflow: "hidden", boxShadow: "var(--s2)" }}>
-            {[
-              { name: "Associate Cloud Engineer", org: "Google Cloud", tag: "Certified" },
-              { name: "Claude with Google Cloud's Vertex AI", org: "Anthropic", tag: "Certified" },
-              { name: "Professional Cloud Architect", org: "Google Cloud", tag: "In progress" },
-              { name: "TCS Gems – On the Spot Award", org: "Tata Consultancy Services", tag: "2025 · 2026" },
-              { name: "TCS Gems – Applaud Award", org: "Tata Consultancy Services", tag: "2026" },
-            ].map((c, i, arr) => (
-              <div key={c.name} className="edu-row" style={{ borderBottom: i < arr.length - 1 ? "1px solid #F3F4F6" : "none" }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>{c.name}</div>
-                  <div style={{ fontSize: 13, color: "var(--text3)", marginTop: 3 }}>{c.org}</div>
-                </div>
-                <span className="year-pill">{c.tag}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Footer */}
-        <footer style={{ fontSize: 12, color: "var(--text3)", paddingTop: 28, borderTop: "1px solid var(--border)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-          <span style={{ fontWeight: 500 }}>Naveen Kumar · Nashville, TN</span>
-          <span>Built with Claude + Next.js · Vercel</span>
+        <footer>
+          <span>Naveen Kumar, Nashville TN</span>
+          <span>Built with Claude, Next.js and Vercel</span>
         </footer>
-
       </main>
     </>
   );
